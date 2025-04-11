@@ -3,7 +3,6 @@
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import dynamic from 'next/dynamic';
-import Dynamsoft from "dwt";
 import { WebTwain } from 'dwt/dist/types/WebTwain';
 
 // Import DWT component with dynamic import to avoid SSR issues
