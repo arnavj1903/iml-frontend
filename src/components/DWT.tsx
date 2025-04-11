@@ -3,31 +3,8 @@
 import React, { useEffect, useRef } from 'react';
 import { WebTwain } from 'dwt/dist/types/WebTwain';
 
-// Define types for the Dynamsoft namespace
-interface DynamsoftDWT {
-  ProductKey: string;
-  ResourcesPath: string;
-  Containers: { WebTwainId: string; ContainerId: string }[];
-  RegisterEvent: (event: string, callback: () => void) => void;
-  GetWebTwain: (containerId: string) => WebTwain;
-  Load: () => void;
-  EnumDWT_ImageType: {
-    IT_PDF: number;
-  };
-}
-
-interface DynamsoftNamespace {
-  DWT: DynamsoftDWT;
-}
-
-declare global {
-  interface Window {
-    Dynamsoft: DynamsoftNamespace;
-  }
-}
-
 interface DWTProps {
-  license?: string;
+  license?: "DLS2eyJoYW5kc2hha2VDb2RlIjoiMTAzODk2MjQwLVRYbFFjbTlxIiwibWFpblNlcnZlclVSTCI6Imh0dHBzOi8vbWRscy5keW5hbXNvZnRvbmxpbmUuY29tIiwib3JnYW5pemF0aW9uSUQiOiIxMDM4OTYyNDAiLCJzdGFuZGJ5U2VydmVyVVJMIjoiaHR0cHM6Ly9zZGxzLmR5bmFtc29mdG9ubGluZS5jb20iLCJjaGVja0NvZGUiOi0xNDg4NDgxMzc1fQ==";
   width?: string;
   height?: string;
   viewMode?: { cols: number, rows: number };
@@ -45,7 +22,8 @@ const DWT: React.FC<DWTProps> = (props) => {
       return;
     }
 
-    const Dynamsoft = window.Dynamsoft;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const Dynamsoft = (window as any).Dynamsoft;
 
     if (props.license) {
       Dynamsoft.DWT.ProductKey = props.license;

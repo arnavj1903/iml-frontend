@@ -12,6 +12,23 @@ const DWT = dynamic(() => import('./DWT'), {
   loading: () => <p>Initializing Document Scanner...</p>,
 });
 
+// Define types for Dynamsoft
+interface DynamsoftDWT {
+  EnumDWT_ImageType: {
+    IT_PDF: number;
+  };
+}
+
+interface DynamsoftNamespace {
+  DWT: DynamsoftDWT;
+}
+
+declare global {
+  interface Window {
+    Dynamsoft: DynamsoftNamespace;
+  }
+}
+
 export default function UploadForm({ onUpload }: { onUpload: (formData: FormData) => void }) {
   const [semester, setSemester] = useState('');
   const [programme, setProgramme] = useState('');
@@ -54,7 +71,7 @@ export default function UploadForm({ onUpload }: { onUpload: (formData: FormData
   };
 
   const handleSave = async () => {
-    if (DWObject.current && DWObject.current.HowManyImagesInBuffer > 0) {
+    if (DWObject.current && DWObject.current.HowManyImagesInBuffer > 0 && typeof window !== 'undefined' && window.Dynamsoft) {
       try {
         // Create a timestamp for the filename
         const timestamp = new Date().getTime();
@@ -64,7 +81,7 @@ export default function UploadForm({ onUpload }: { onUpload: (formData: FormData
         const blob = await new Promise<Blob>((resolve, reject) => {
           DWObject.current!.ConvertToBlob(
             [0],  // Convert the first image
-            Dynamsoft.DWT.EnumDWT_ImageType.IT_PDF,
+            window.Dynamsoft.DWT.EnumDWT_ImageType.IT_PDF,
             function(blob) {
               resolve(blob);
             },
