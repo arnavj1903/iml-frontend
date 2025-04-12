@@ -2,6 +2,16 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import Image from 'next/image';
+
+interface ScanResult {
+  image: string;
+}
+
+interface ScannerInstance {
+  startScan: () => void;
+  destroy?: () => void;
+}
 
 export default function UploadForm({ onUpload }: { onUpload: (formData: FormData) => void }) {
   const [semester, setSemester] = useState('');
@@ -11,9 +21,41 @@ export default function UploadForm({ onUpload }: { onUpload: (formData: FormData
   const [file, setFile] = useState<File | null>(null);
   const [showScanner, setShowScanner] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isFormComplete, setIsFormComplete] = useState(false);
   
   const scannerContainerRef = useRef<HTMLDivElement>(null);
-  const scannerInstance = useRef<any>(null);
+  const scannerInstance = useRef<ScannerInstance | null>(null);
+
+  // Check if the form is filled out sufficiently to enable scanning
+  useEffect(() => {
+    if (semester && programme && course && section) {
+      setIsFormComplete(true);
+    } else {
+      setIsFormComplete(false);
+    }
+  }, [semester, programme, course, section]);
+
+  const initializeScanner = () => {
+    if (!scannerContainerRef.current || !window.jscanify) return;
+
+    try {
+      // Initialize jscanify
+      scannerInstance.current = window.jscanify.init({
+        container: scannerContainerRef.current,
+        onScan: handleScanComplete
+      });
+      
+      // Auto-start scanning once the scanner is initialized
+      setTimeout(() => {
+        if (scannerInstance.current) {
+          scannerInstance.current.startScan();
+        }
+      }, 500);
+    } catch (error) {
+      console.error('Error initializing scanner:', error);
+      alert('Failed to initialize scanner. Please try again.');
+    }
+  };
 
   // Initialize jscanify scanner when component mounts
   useEffect(() => {
@@ -34,24 +76,9 @@ export default function UploadForm({ onUpload }: { onUpload: (formData: FormData
         document.body.removeChild(script);
       };
     }
-  }, [showScanner]);
+  }, [showScanner, initializeScanner]);
 
-  const initializeScanner = () => {
-    if (!scannerContainerRef.current || !window.jscanify) return;
-
-    try {
-      // Initialize jscanify
-      scannerInstance.current = window.jscanify.init({
-        container: scannerContainerRef.current,
-        onScan: handleScanComplete
-      });
-    } catch (error) {
-      console.error('Error initializing scanner:', error);
-      alert('Failed to initialize scanner. Please try again.');
-    }
-  };
-
-  const handleScanComplete = (result: any) => {
+  const handleScanComplete = (result: ScanResult) => {
     if (result && result.image) {
       // Convert data URL to File object
       fetch(result.image)
@@ -63,8 +90,10 @@ export default function UploadForm({ onUpload }: { onUpload: (formData: FormData
           
           setFile(scannedFile);
           setPreviewUrl(result.image);
+          setShowScanner(false); // Hide scanner after successful scan
           
-          alert('Document scanned successfully!');
+          // Auto submit if desired (uncomment this to enable auto-submit after scan)
+          // handleSubmit(new Event('submit') as React.FormEvent);
         })
         .catch(err => {
           console.error('Error converting scan to file:', err);
@@ -104,11 +133,12 @@ export default function UploadForm({ onUpload }: { onUpload: (formData: FormData
   };
 
   const startScan = () => {
-    if (scannerInstance.current) {
-      scannerInstance.current.startScan();
-    } else {
-      alert('Scanner not initialized. Please try again.');
+    if (!isFormComplete) {
+      alert('Please complete all form fields before scanning');
+      return;
     }
+    
+    setShowScanner(true);
   };
 
   return (
@@ -166,37 +196,58 @@ export default function UploadForm({ onUpload }: { onUpload: (formData: FormData
             <option value="H">H</option>
             <option value="I">I</option>
           </select>
-
-          <div className="col-span-2 flex flex-col space-y-2">
+        </div>
+        
+        {isFormComplete && !showScanner && (
+          <div className="flex flex-col space-y-4 mt-4">
             <div className="flex space-x-2">
+              <Button 
+                type="button" 
+                onClick={startScan}
+                className="w-full bg-blue-600 hover:bg-blue-700"
+              >
+                Scan Document
+              </Button>
+            </div>
+            
+            <div className="text-center text-sm text-gray-500">
+              - OR -
+            </div>
+            
+            <div className="border-t pt-4">
               <input
                 type="file"
                 accept="image/*,application/pdf"
                 onChange={handleFileChange}
-                className="flex-1"
+                className="w-full p-2 border rounded"
               />
-              <Button 
-                type="button" 
-                onClick={() => setShowScanner(!showScanner)}
-                className="whitespace-nowrap"
-              >
-                {showScanner ? 'Hide Scanner' : 'Use Scanner'}
-              </Button>
             </div>
-            
-            {previewUrl && (
-              <div className="mt-2 border rounded p-2">
-                <img 
-                  src={previewUrl} 
-                  alt="Preview" 
-                  className="max-h-40 mx-auto object-contain"
-                />
-              </div>
-            )}
           </div>
-        </div>
+        )}
         
-        <Button type="submit" className="w-full">Upload</Button>
+        {previewUrl && (
+          <div className="mt-4 border rounded p-4">
+            <h3 className="font-medium mb-2">Document Preview</h3>
+            <div className="relative h-60 w-full">
+              {previewUrl && (
+                <Image 
+                  src={previewUrl} 
+                  alt="Document Preview" 
+                  className="object-contain"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 500px"
+                  priority
+                />
+              )}
+            </div>
+            <Button 
+              type="submit" 
+              className="w-full mt-4 bg-green-600 hover:bg-green-700"
+            >
+              Upload Document
+            </Button>
+          </div>
+        )}
       </form>
 
       {showScanner && (
@@ -206,7 +257,24 @@ export default function UploadForm({ onUpload }: { onUpload: (formData: FormData
             className="h-64 border rounded bg-gray-100"
           ></div>
           
-          <Button onClick={startScan} className="w-full">Scan Document</Button>
+          <div className="flex space-x-2">
+            <Button 
+              onClick={() => setShowScanner(false)} 
+              className="w-1/3 bg-gray-500 hover:bg-gray-600"
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => {
+                if (scannerInstance.current) {
+                  scannerInstance.current.startScan();
+                }
+              }} 
+              className="w-2/3 bg-blue-600 hover:bg-blue-700"
+            >
+              Capture Image
+            </Button>
+          </div>
         </div>
       )}
     </div>
@@ -219,11 +287,8 @@ declare global {
     jscanify: {
       init: (options: {
         container: HTMLElement;
-        onScan: (result: any) => void;
-      }) => {
-        startScan: () => void;
-        destroy?: () => void;
-      };
+        onScan: (result: ScanResult) => void;
+      }) => ScannerInstance;
     };
   }
 }
