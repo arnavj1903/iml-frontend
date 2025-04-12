@@ -1,18 +1,19 @@
 'use client';
 
-import { useEffect } from 'react';
-import UploadForm from '../components/UploadForm';
+import { useState } from 'react';
 import Head from 'next/head';
 import Script from 'next/script';
+import UploadForm from '@/components/UploadForm';
 
 export default function Home() {
-  // Ensure Dynamsoft resources are loaded
-  useEffect(() => {
-    // Optional: Initialize any global settings for DWT here
-  }, []);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<{ success: boolean; message: string } | null>(null);
 
   const handleUpload = async (formData: FormData) => {
     try {
+      setIsUploading(true);
+      setUploadStatus(null);
+      
       // Send the formData to your backend
       const res = await fetch('/api/upload', {
         method: 'POST',
@@ -20,16 +21,21 @@ export default function Home() {
       });
 
       const result = await res.json();
-      console.log(result);
+      setUploadStatus({
+        success: result.success,
+        message: result.success 
+          ? 'Document uploaded successfully!' 
+          : (result.message || 'Upload failed. Please try again.')
+      });
       
-      if (result.success) {
-        alert('Document uploaded successfully!');
-      } else {
-        alert('Upload failed: ' + (result.message || 'Unknown error'));
-      }
     } catch (error) {
       console.error('Upload error:', error);
-      alert('Error uploading document. Please try again.');
+      setUploadStatus({
+        success: false,
+        message: 'An unexpected error occurred. Please try again.'
+      });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -40,15 +46,22 @@ export default function Home() {
         <meta name="description" content="Upload and scan answer scripts" />
       </Head>
       
-      {/* Load Dynamic Web TWAIN script */}
-      <Script 
-        src="https://unpkg.com/dwt@18.5.1/dist/dynamsoft.webtwain.min.js" 
-        strategy="beforeInteractive"
-      />
-      
       <main className="p-8">
         <h1 className="text-2xl font-bold mb-4">Upload Answer Script</h1>
+        
+        {uploadStatus && (
+          <div className={`mb-4 p-4 rounded ${uploadStatus.success ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+            {uploadStatus.message}
+          </div>
+        )}
+        
         <UploadForm onUpload={handleUpload} />
+        
+        {isUploading && (
+          <div className="mt-4 text-center">
+            <p>Uploading... Please wait</p>
+          </div>
+        )}
       </main>
     </>
   );
