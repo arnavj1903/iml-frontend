@@ -3,25 +3,31 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 
-export default function UploadForm({ onUpload }: { onUpload: (formData: FormData) => void }) {
+export default function UploadForm({ onUpload }: { onUpload: (files: File[], metadata: any) => void }) {
   const [semester, setSemester] = useState('');
   const [programme, setProgramme] = useState('');
   const [course, setCourse] = useState('');
   const [section, setSection] = useState('');
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) return alert('Please upload an image');
+    if (files.length == 0) return alert('Please upload atleast one image');
 
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('semester', semester);
-    formData.append('programme', programme);
-    formData.append('course', course);
-    formData.append('section', section);
+    const metadata = {
+      semester,
+      programme,
+      course,
+      section
+    };
 
-    onUpload(formData);
+    onUpload(files, metadata);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      setFiles(Array.from(e.target.files));
+    }
   };
 
   return (
@@ -55,12 +61,12 @@ export default function UploadForm({ onUpload }: { onUpload: (formData: FormData
               const programmeCode = programme === 'BTech' ? '1' : programme === 'BSc' ? '2' : '3';
               const semesterCode = semester;
               for (let i = 0; i < 10; i++) {
-            courses.push(`CS${year}${semesterCode}${programmeCode}${i}`);
+                courses.push(`CS${year}${semesterCode}${programmeCode}${i}`);
               }
             }
             return courses.map((courseCode) => (
               <option key={courseCode} value={courseCode}>
-            {courseCode}
+                {courseCode}
               </option>
             ));
           })()}
@@ -79,14 +85,24 @@ export default function UploadForm({ onUpload }: { onUpload: (formData: FormData
           <option value="I">I</option>
         </select>
 
-        <input
-          type="file"
-          accept="image/*"
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
-          className="col-span-2"
-        />
+        <div className="space-y-2">
+          <input
+            type="file"
+            multiple
+            accept="image/*"
+            onChange={handleFileChange}
+            className="w-full"
+          />
+          {files.length > 0 && (
+            <div className="text-sm text-gray-600">
+              {files.length} file(s) selected
+            </div>
+          )}
+        </div>
       </div>
-      <Button type="submit" className="w-full">Upload & Scan</Button>
+      <Button type="submit" className="w-full">
+        Process {files.length} File{files.length !== 1 ? 's' : ''}
+      </Button>
     </form>
   );
 }

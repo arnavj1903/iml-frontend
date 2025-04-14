@@ -9,7 +9,7 @@ export async function POST(request: NextRequest) {
     if (!data || !data.students) {
       return NextResponse.json({ error: 'Invalid data format' }, { status: 400 });
     }
-    
+     
     // Create a new workbook
     const wb = XLSX.utils.book_new();
     

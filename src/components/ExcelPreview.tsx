@@ -17,7 +17,7 @@ interface ExcelData {
     };
   }>;
 }
-
+ 
 interface ExcelPreviewProps {
   data: ExcelData;
 }
@@ -34,6 +34,33 @@ export default function ExcelPreview({ data }: ExcelPreviewProps) {
       questionHeaders.push(`Q${q}${sub}`);
     }
   }
+  
+  // Calculate totals and averages
+  const totalsByQuestion: { [key: string]: number } = {};
+  questionHeaders.forEach(header => {
+    totalsByQuestion[header] = 0;
+  });
+  
+  let grandTotal = 0;
+  
+  data.students.forEach(student => {
+    questionHeaders.forEach(header => {
+      const qNum = header.substring(1, header.length - 1);
+      const subQ = header.charAt(header.length - 1).toLowerCase();
+      const mark = student.questions[`q${qNum}`]?.[subQ] || '';
+      
+      if (mark && !isNaN(Number(mark))) {
+        totalsByQuestion[header] += Number(mark);
+      }
+    });
+    
+    if (student.total_marks && !isNaN(Number(student.total_marks))) {
+      grandTotal += Number(student.total_marks);
+    }
+  });
+  
+  const averageTotal = data.students.length > 0 ? 
+    (grandTotal / data.students.length).toFixed(2) : "0";
   
   return (
     <div className="overflow-x-auto border rounded">
@@ -67,11 +94,11 @@ export default function ExcelPreview({ data }: ExcelPreviewProps) {
               {/* Render marks for each question */}
               {questionHeaders.map((header) => {
                 const qNum = header.substring(1, header.length - 1);
-                const subQ = header.charAt(header.length - 1);
+                const subQ = header.charAt(header.length - 1).toLowerCase();
                 const mark = student.questions[`q${qNum}`]?.[subQ] || '';
                 
                 return (
-                  <td key={header} className="px-2 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td key={header} className="px-2 py-4 whitespace-nowrap text-sm text-gray-500 text-center">
                     {mark}
                   </td>
                 );
@@ -82,6 +109,29 @@ export default function ExcelPreview({ data }: ExcelPreviewProps) {
               </td>
             </tr>
           ))}
+          
+          {/* Summary row with totals */}
+          <tr className="bg-gray-100">
+            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+              Average
+            </td>
+            
+            {questionHeaders.map((header) => {
+              const avg = data.students.length > 0 ? 
+                (totalsByQuestion[header] / data.students.length).toFixed(1) : "0";
+              
+              return (
+                <td key={`avg-${header}`} className="px-2 py-4 whitespace-nowrap text-sm text-gray-700 text-center font-medium">
+                  {avg}
+                </td>
+              );
+            })}
+            
+            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+              {averageTotal}
+            </td>
+          </tr>
+          
         </tbody>
       </table>
       
